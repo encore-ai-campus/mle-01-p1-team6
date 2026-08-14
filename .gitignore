@@ -1,0 +1,11 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Python cache and local tooling files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/

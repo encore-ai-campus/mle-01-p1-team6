@@ -1,0 +1,55 @@
+[project]
+name = "enkoa-practice-llm-agent"
+version = "0.1.0"
+description = "엔코아 AI캠퍼스 LLM·에이전트 실습자료"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel>=7.3.0",
+    "jupyterlab>=4.6.2",
+    "numpy>=2.3,<2.5",
+    "openai>=1.0",
+    "pandas>=2.3,<3",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0",
+    # day15 — 벡터 검색·벡터 DB
+    "scikit-learn>=1.5",
+    "sentence-transformers>=3.0",
+    "chromadb>=1.0",
+    "qdrant-client>=1.12",
+    # day16 — 문서 파싱·RAG 파이프라인
+    "pymupdf4llm>=1.28.0",
+    "pymupdf>=1.28.0",
+    "requests>=2.32",
+    # day17 — 데이터베이스·SQL (Supabase·pgvector)
+    "supabase>=2.15",
+    # day18 — LangChain 기본 구조(모델·프롬프트·파서·LCEL·Runnable·Memory)
+    #   장기 기억 절은 day15 의 chromadb·sentence-transformers 를 그대로 재사용한다.
+    "langchain>=1.0",
+    "langchain-openai>=1.0",
+    "pyyaml>=6.0",
+    # day19 — LangChain 에이전트·툴(RAG 를 LangChain 부품으로·Text-to-SQL)
+    #   Text-to-SQL 은 sqlite(표준 라이브러리)라 새 의존성이 없다.
+    "langchain-chroma>=0.2",
+    "langchain-huggingface>=0.3",
+    "langchain-text-splitters>=1.0",
+    # day20 — ReAct·멀티툴 에이전트 + RAG 검색 평가
+    #   교안_02 가 Precision@K·Recall@K 를 RAGAS 의 ID 기반 지표로 낸다
+    #   (IDBasedContextPrecision·IDBasedContextRecall — 조각 id 만 대조해 모델·임베딩을 안 쓴다).
+    #   ⚠️ 상한 <1.0 은 필수다. 그 둘은 `ragas.metrics` 경로에만 있고 v1.0 에서 제거 예정이며,
+    #     현재 `ragas.metrics.collections` 에는 ID 기반 두 지표가 없다(0.4.3 실측).
+    #   langchain-community 는 ragas 가 끌어온다(교안의 자리표시자 심이 그 경로를 메운다).
+    "ragas>=0.4,<1.0",
+    # 노트북이 직접 import 하는 것은 명시한다 — 지금은 langchain 이 함께 끌어오지만
+    #   그쪽 의존성이 바뀌면 조용히 사라진다.
+    "langchain-core>=1.0",
+    # day21 — MCP 클라이언트·계획 실행 자동화
+    #   MCP 서버 자체는 파이썬 의존성이 아니다. npx·uvx 가 그때그때 받아 띄운다
+    #   (@modelcontextprotocol/server-filesystem, mcp-server-code-runner, @playwright/mcp,
+    #    duckduckgo-mcp-server, mcp-server-sqlite). 크로미움만 한 번 설치가 필요하다.
+    "langchain-mcp-adapters>=0.3",
+    #   교안_02 가 GraphRecursionError 를 직접 import 한다(langchain 이 함께 끌어오지만 명시한다).
+    "langgraph>=1.0",
+    #   에이전트가 코드 실행 서버 안에서 그래프를 그려 PNG 로 저장한다.
+    "matplotlib>=3.9",
+]
