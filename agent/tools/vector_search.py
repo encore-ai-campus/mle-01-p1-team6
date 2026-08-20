@@ -3,6 +3,7 @@ from pathlib import Path
 from langchain_core.tools import tool
 import chromadb
 from sentence_transformers import SentenceTransformer
+from pydantic import BaseModel, Field
 model = SentenceTransformer(
     "SamilPwC-AXNode-GenAI/PwC-Embedding_expr"
 )
@@ -20,19 +21,50 @@ collection = client.get_collection(
     name="book"
 )
 
+#기본 입력 틀 제작 : ai의 메타데이터 필터링 용이 목적
+class VectorSearchInput(BaseModel):
+    query: str = Field(
+        description="책의 내용이나 특징을 검색하기 위한 자연어 검색 문장"
+    )
+    k: int = Field(default=5, ge=1,
+        description="검색할 책의 개수. 기본값은 5")
+    
+    category_name: str | None = Field( default=None,
+        description="책 카테고리. 조건이 없으면 None")
+    
+    author: str | None = Field( default=None,
+        description="작가 이름. 조건이 없으면 None")
+    
+    min_price: int | None = Field( default=None, ge=0,
+        description="최소 가격. '10000원 이상'이면 10000")
+    
+    max_price: int | None = Field(default=None,ge=0,
+        description="최대 가격. '20000원 이하'이면 20000")
+    
+    min_rating: int | None = Field(default=None,ge=1,le=10,
+        description="최소 평점. '평점 7 이상'이면 7")
+    
+    max_rating: int | None = Field(default=None,ge=1,le=10,
+        description="최대 평점. '평점 8 이하'이면 8")
+
+
 # 유사도 검색 도구
-@tool
+@tool(args_schema=VectorSearchInput)
 def vector_search_descp(
     query: str,
+    k: int = 5,
     category_name: str | None = None,
     author: str | None = None,
-    priceStandard: int | None = None,
-    customerReviewRank: int | None = None
+    min_price: int | None = None,
+    max_price: int | None = None,
+    min_rating: int | None = None,
+    max_rating: int | None = None
 ):
     """책 소개 기반 벡터 유사도 검색.
 
     Args:
-        query: 유사도 검색 문장
+        query: 유사도 검색 문장,
+        k: 검색할 책의 개수.(유사도가 높은 몇권까지?) 기본값 5
         category_name: 책 카테고리( 다음 중에서 하나를 입력: "건강/취미","경제경영","과학","사회과학","소설/시/희곡","어린이","에세이","여행","역사","예술/대중문화","요리/살림","인문학","자기계발","청소년","컴퓨터/모바일")
         author: 작가 이름
         priceStandard: 최대 가격
@@ -49,19 +81,33 @@ def vector_search_descp(
     filters = []
 
     if category_name:
-        filters.append({"category_name": category_name})
-
-    if author:
-        filters.append({"author": author})
-
-    if priceStandard is not None:
         filters.append({
-            "priceStandard": {"$lte": priceStandard}
+            "category_name": category_name
         })
 
-    if customerReviewRank is not None:
+    if author:
         filters.append({
-            "customerReviewRank": {"$gte": customerReviewRank}
+            "author": author
+        })
+
+    if min_price is not None:
+        filters.append({
+            "priceStandard": {"$gte": min_price}
+        })
+
+    if max_price is not None:
+        filters.append({
+            "priceStandard": {"$lte": max_price}
+        })
+
+    if min_rating is not None:
+        filters.append({
+            "customerReviewRank": {"$gte": min_rating}
+        })
+
+    if max_rating is not None:
+        filters.append({
+            "customerReviewRank": {"$lte": max_rating}
         })
 
     # 필터 개수에 따라 where 생성
@@ -81,10 +127,10 @@ def vector_search_descp(
         #           ]
         #       }       
 
-    # 필터 + 벡터 유사도 검색(top5)
+    # 필터 + 벡터 유사도 검색(topK)
     results = collection.query(
         query_embeddings=query_embedding,
-        n_results=5,
+        n_results=k,
         where=where
     )
 
