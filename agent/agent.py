@@ -1,17 +1,17 @@
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
+
+#환경 설정 가져오기
 load_dotenv((BASE_DIR / "../.env").resolve())
 
 #도구 위치에서 불러오기
 from tools.vector_search import vector_search_descp #유사도 검색
 from tools.sql_reader import search_books #sql 실행
-
-#환경 설정 가져오기
-load_dotenv("../.env")
 
 GPTmodel = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
@@ -42,32 +42,44 @@ agent_prompt="""
     조건에 맞는 책을 찾지 못한 경우
     임의로 추천하지 말고 조건에 맞는 결과가 없다고 답변하세요."""
 
+#에이전트 제작
 book_agent = create_agent(
     model=GPTmodel,
     tools=book_tools,
     system_prompt=agent_prompt
 )
 
+#에이전트 기억 저장소 생성
+agent_memory = []
 
-###테스트 코드입니다.
-test_prompt = input("원하는 책을 고르시오: ")
 
-#답을 받아오기
-result = book_agent.invoke({
-    "messages": [{
-            "role": "user",
-            "content": test_prompt
-        }]
-})
+#반복 내부에서 기억 구현(이 부분은 streamlit방법으로 바꿔야 됨)
+while True:
+    #입력 받기
+    user_input_prompt = input("책 챗봇입니다. 무엇을 도와드릴까요?(종료는 0): ")
 
-agent_result = result["messages"][-1].content
-#+ 히스토리(단기기억)
+    if user_input_prompt=='0' :
+        print('종료되었습니다.')
 
-###테스트 코드 실제로 에이전트가 모델을 호출했는지 확인
-# for message in result["messages"]:
-#     print(type(message).__name__)
-#     print(message)
-#     print("-" * 50)
+        #현재까지의 기록 보기
+        print(agent_memory)
+        break
 
-#ai의 답변만 출력
-print(agent_result)
+    #현재 사용자 질문을 기존 대화에 추가
+    agent_memory.append(
+        HumanMessage(content=user_input_prompt)
+    )
+
+    #에이전트에 묻기(+메모리)
+    result = book_agent.invoke({
+        "messages": agent_memory
+    })
+
+    #답변
+    agent_result = result["messages"][-1].content
+
+    #ai의 답변만 출력
+    print(agent_result)
+
+    #전체 대화 저장
+    agent_memory = result["messages"]
