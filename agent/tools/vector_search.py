@@ -41,10 +41,10 @@ class VectorSearchInput(BaseModel):
     max_price: int | None = Field(default=None,ge=0,
         description="최대 가격. '20000원 이하'이면 20000")
     
-    min_rating: int | None = Field(default=None,ge=1,le=10,
+    min_rating: float | None = Field(default=None,ge=1,le=10,
         description="최소 평점. '평점 7 이상'이면 7")
     
-    max_rating: int | None = Field(default=None,ge=1,le=10,
+    max_rating: float | None = Field(default=None,ge=1,le=10,
         description="최대 평점. '평점 8 이하'이면 8")
 
 
@@ -57,8 +57,8 @@ def vector_search_descp(
     author: str | None = None,
     min_price: int | None = None,
     max_price: int | None = None,
-    min_rating: int | None = None,
-    max_rating: int | None = None
+    min_rating: float | None = None,
+    max_rating: float | None = None
 ):
     """책 소개를 기반으로 메타데이터 필터링과 벡터 유사도 검색을 수행합니다."""
 
