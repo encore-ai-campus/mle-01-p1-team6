@@ -59,4 +59,5 @@ dependencies = [
     "streamlit>=1.61.1",
     "plotly>=6.9.0",
     "seaborn>=0.13.2",
+    "torchvision>=0.28.0",
 ]
