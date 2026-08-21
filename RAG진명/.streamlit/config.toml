@@ -1,0 +1,21 @@
+[theme]
+base = "light"
+primaryColor = "#8B5E3C"
+backgroundColor = "#F7F1E8"
+secondaryBackgroundColor = "#EDE1D2"
+textColor = "#30251E"
+linkColor = "#7A4B2A"
+borderColor = "#D7C5B3"
+font = "'Noto Serif KR':https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;600;700&display=swap"
+headingFont = "'Noto Serif KR':https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap"
+baseRadius = "large"
+buttonRadius = "full"
+showWidgetBorder = true
+showSidebarBorder = true
+
+[theme.sidebar]
+backgroundColor = "#34251D"
+secondaryBackgroundColor = "#49362A"
+textColor = "#FBF5EC"
+borderColor = "#604838"
+primaryColor = "#D9A066"
