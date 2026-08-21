@@ -3,6 +3,7 @@ from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage,AIMessage
 from pathlib import Path
 from dotenv import load_dotenv
+from langchain.agents.middleware import TodoListMiddleware
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -19,35 +20,37 @@ GPTmodel = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 book_tools = [vector_search_descp,search_books]
 
 #에이전트 입력 프롬프트
-agent_prompt="""
-    당신은 책 검색 및 추천 에이전트입니다.
+agent_prompt = """
+당신은 책 검색 및 추천 에이전트입니다.
 
-    사용자의 요청에 따라 적절한 검색 도구를 선택하세요.
+- 카테고리, 가격, 평점, 순위, 제목, 저자, 출판사, 출간일 등
+  명확한 조건 검색은 search_books를 사용하세요.
 
-    - 카테고리, 가격, 평점, 순위, 제목, 저자, 출판사, 출간일 등
-    명확한 조건이 있으면 search_books 도구를 사용하세요.
+- 책의 내용, 분위기, 주제, 특징 등 의미 기반 검색은
+  vector_search_descp를 사용하세요.
 
-    - 책의 내용, 분위기, 주제, 특징처럼 의미 기반 검색이 필요하면
-    vector_search_descp 도구를 사용하세요.
+- 책의 자세한 정보는 search_books를 사용하면 있습니다.
+  vector_search_descp로 찾은 책의 상세 정보가 필요하면
+  search_books로 추가 조회하세요.
 
-    - 조건 검색과 의미 검색이 모두 필요한 요청이면
-    필요한 도구를 함께 사용하세요.
+- row_id는 두 도구가 공통으로 사용하는 책의 Primary Key입니다.
+  두 도구의 결과를 연결하거나 비교할 때는 row_id를 기준으로 판단하세요.
 
-    반드시 검색 도구가 반환한 정보만 근거로 답변하세요.
-    검색 결과에 없는 책이나 정보는 임의로 생성하지 마세요.
+- 조건 검색과 의미 검색이 모두 필요하면 두 도구를 함께 사용하세요.
 
-    책을 추천할 때는 제목, 저자와 함께
-    검색 결과에 포함된 출처 정보(itemId 또는 link 등)를 표시하세요.
+반드시 검색 도구가 반환한 정보만 근거로 답변하고,
+없는 정보는 임의로 생성하지 마세요.
 
-    조건에 맞는 책을 찾지 못한 경우
-    임의로 추천하지 말고 조건에 맞는 결과가 없다고 답변하세요."""
+조건에 맞는 책이 없으면 없다고 답변하세요.
+"""
 
 
 #에이전트 제작
 book_agent = create_agent(
     model=GPTmodel,
     tools=book_tools,
-    system_prompt=agent_prompt
+    system_prompt=agent_prompt,
+    middleware=[TodoListMiddleware()]
 )
 
 # #에이전트 기억 저장소 생성
