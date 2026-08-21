@@ -24,3 +24,8 @@ def showsql(res):
 
 
 print('Text-to-SQL 에이전트 준비 완료')
+
+
+
+
+sql_chain = 

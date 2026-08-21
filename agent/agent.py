@@ -40,6 +40,7 @@ result = book_agent.invoke({
 })
 
 agent_result = result["messages"][-1].content
+#+ 히스토리(단기기억)
 
 ###테스트 코드 실제로 에이전트가 모델을 호출했는지 확인
 # for message in result["messages"]:
