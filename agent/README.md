@@ -11,12 +11,6 @@ cd C:\Users\Playdata\Desktop\mle-01-p1-team6\agent
 uv run streamlit run .\app.py
 ```
 
-## 파일별 역할
-
-### `app.py` — 화면 실행
-
-Streamlit 화면을 실행합니다. 사용자의 질문을 입력받고, `book_agent.py`의 Agent를 호출합니다. 답변과 추천 도서 카드를 화면에 표시하며 대화 초기화도 담당합니다.
-
 ## 함수 설명
 
 ### app.py
