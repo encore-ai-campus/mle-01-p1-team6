@@ -1,6 +1,8 @@
-# Streamlit 화면입니다. Agent 로직은 book_agent홍기표.py에 두고,
+
 # 이 파일은 입력·대화 기억·책 카드 표시만 담당합니다.
 from __future__ import annotations
+from book_agent import ask_book_agent_with_results
+from book_agent import reset_book_memory
 
 from functools import lru_cache
 from typing import Any
@@ -27,7 +29,7 @@ def initial_messages() -> list[dict[str, Any]]:
 @lru_cache(maxsize=1)
 def _load_agent_runner():
     # Agent 모듈은 첫 질문 때 한 번만 불러와 초기화 비용을 줄입니다.
-    from book_agent홍기표 import ask_book_agent_with_results
+    from book_agent import ask_book_agent_with_results
 
     return ask_book_agent_with_results
 
@@ -42,7 +44,7 @@ def run_agent_query(question: str, thread_id: str, runner=None):
 
 def _reset_agent_memory(thread_id: str) -> None:
     # 화면의 대화 초기화 버튼과 Agent의 기억을 함께 초기화합니다.
-    from book_agent홍기표 import reset_book_memory
+    from book_agent import reset_book_memory
 
     reset_book_memory(thread_id)
 
