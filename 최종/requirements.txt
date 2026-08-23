@@ -8,4 +8,5 @@ supabase>=2.15
 langchain>=1.0
 langchain-openai>=1.0
 langchain-huggingface>=0.3
+sentence-transformers>=3.0
 langgraph>=1.0
