@@ -24,8 +24,10 @@ def load_deployment_secrets() -> None:
     """Streamlit Cloud secrets를 Agent가 읽는 환경변수로 연결합니다."""
     for key in ("OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY"):
         try:
-            if key in st.secrets:
-                os.environ[key] = str(st.secrets[key])
+            if not os.getenv(key) and key in st.secrets:
+                value = str(st.secrets[key]).strip()
+                if value:
+                    os.environ[key] = value
         except Exception:
             # 로컬에서 secrets.toml이 없어도 대시보드와 검색은 사용할 수 있습니다.
             continue

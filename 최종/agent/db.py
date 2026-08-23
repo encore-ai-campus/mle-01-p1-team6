@@ -17,7 +17,8 @@ def get_settings():
     )
     for env_path in env_candidates:
         if env_path.exists():
-            load_dotenv(env_path, override=True)
+            # Cloud Secrets 등 이미 주입된 환경변수는 우선 유지합니다.
+            load_dotenv(env_path, override=False)
             break
 
     url = os.getenv("SUPABASE_URL")

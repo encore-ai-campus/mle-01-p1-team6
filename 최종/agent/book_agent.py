@@ -29,14 +29,15 @@ CHROMA_DB_PATH = Path(
     os.getenv("CHROMA_DB_PATH", str(PROJECT_ROOT / "chroma_db"))
 )
 
-# .env에서 OpenAI와 Supabase 접속 정보를 읽습니다.
-load_dotenv(ENV_PATH, override=True)
+# 로컬 .env를 읽되, Streamlit Cloud에서 주입한 환경변수는 덮어쓰지 않습니다.
+load_dotenv(ENV_PATH, override=False)
 
 
 # Agent가 사용할 언어 모델입니다.
 GPTmodel = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
+    api_key=os.getenv("OPENAI_API_KEY"),
 )
 
 # 책 설명을 의미 벡터로 변환할 임베딩 모델입니다.
