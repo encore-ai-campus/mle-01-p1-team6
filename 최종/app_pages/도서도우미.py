@@ -24,7 +24,7 @@ def load_deployment_secrets() -> None:
     """Streamlit Cloud secrets를 Agent가 읽는 환경변수로 연결합니다."""
     for key in ("OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY"):
         try:
-            if not os.getenv(key) and key in st.secrets:
+            if key in st.secrets:
                 value = str(st.secrets[key]).strip()
                 if value:
                     os.environ[key] = value

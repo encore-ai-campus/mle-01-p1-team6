@@ -32,12 +32,19 @@ CHROMA_DB_PATH = Path(
 # 로컬 .env를 읽되, Streamlit Cloud에서 주입한 환경변수는 덮어쓰지 않습니다.
 load_dotenv(ENV_PATH, override=False)
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+if not OPENAI_API_KEY:
+    raise RuntimeError(
+        "OPENAI_API_KEY가 없습니다. Streamlit Cloud의 Settings > Secrets에 "
+        "OPENAI_API_KEY를 등록한 뒤 앱을 재시작하세요."
+    )
+
 
 # Agent가 사용할 언어 모델입니다.
 GPTmodel = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
-    api_key=os.getenv("OPENAI_API_KEY"),
+    api_key=OPENAI_API_KEY,
 )
 
 # 책 설명을 의미 벡터로 변환할 임베딩 모델입니다.

@@ -21,7 +21,7 @@ apply_library_theme()
 # 환경변수로 연결합니다. 이미 설정된 환경변수는 우선 유지합니다.
 for _key in ("OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY"):
     try:
-        if not os.getenv(_key) and _key in st.secrets:
+        if _key in st.secrets:
             _value = str(st.secrets[_key]).strip()
             if _value:
                 os.environ[_key] = _value
