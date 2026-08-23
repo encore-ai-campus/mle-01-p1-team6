@@ -1,0 +1,11 @@
+streamlit>=1.61,<2
+pandas>=2.3,<3
+altair>=5.0
+scikit-learn>=1.5
+python-dotenv>=1.0
+chromadb>=1.0
+supabase>=2.15
+langchain>=1.0
+langchain-openai>=1.0
+langchain-huggingface>=0.3
+langgraph>=1.0
