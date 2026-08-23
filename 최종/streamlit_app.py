@@ -25,7 +25,7 @@ page = st.navigation(
         ],
         "도서 서비스": [
             st.Page(
-                "대시보드_진명.py",
+                "대시보드.py",
                 title="📊 도서 분석 대시보드",
                 icon=":material/analytics:",
             ),
