@@ -1,5 +1,5 @@
 # 도서 데이터 기반 검색·분석·추천 웹 서비스
-
+- 배포링크:https://mle-01-p1-team6-ysk7r3opd956tzx36qdg7k.streamlit.app/
 ## 목차
 1. 기획 배경
 2. 프로젝트 개괄
@@ -58,6 +58,8 @@
 
 도서도우미 AI: 사용자의 취향을 파악하여 베스트셀러 중에서 도서를 추천.
 
+## 2-3 데이터 명세서
+https://docs.google.com/spreadsheets/d/1ZJgJIghaqzIkKTq6vFZOF8Jn6ew6aYHZfGQ7P2dl-K4/edit?usp=sharing
 
 ## 3. 서비스 소개
 
