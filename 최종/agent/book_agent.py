@@ -2,6 +2,7 @@
 # app홍기표.py는 이 파일의 ask_book_agent_with_results와
 # reset_book_memory를 호출하므로 두 함수는 반드시 유지해야 합니다.
 from pathlib import Path
+from contextvars import ContextVar
 import ast
 import json
 import os
@@ -17,10 +18,9 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from pydantic import BaseModel, Field
 
-from db import create_supabase_client  # Supabase 연결 함수
+from db import create_supabase_client
 
 
-# 현재 파일 기준으로 프로젝트 경로를 계산합니다.
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 
@@ -29,25 +29,24 @@ CHROMA_DB_PATH = Path(
     os.getenv("CHROMA_DB_PATH", str(PROJECT_ROOT / "chroma_db"))
 )
 
-# 로컬 .env를 읽되, Streamlit Cloud에서 주입한 환경변수는 덮어쓰지 않습니다.
 load_dotenv(ENV_PATH, override=False)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+
 if not OPENAI_API_KEY:
     raise RuntimeError(
-        "OPENAI_API_KEY가 없습니다. Streamlit Cloud의 Settings > Secrets에 "
-        "OPENAI_API_KEY를 등록한 뒤 앱을 재시작하세요."
+        "OPENAI_API_KEY가 없습니다. "
+        ".env 파일을 확인하세요."
     )
 
 
-# Agent가 사용할 언어 모델입니다.
 GPTmodel = ChatOpenAI(
     model="gpt-4o-mini",
     temperature=0,
     api_key=OPENAI_API_KEY,
 )
 
-# 책 설명을 의미 벡터로 변환할 임베딩 모델입니다.
+
 embeddings = HuggingFaceEmbeddings(
     model_name="SamilPwC-AXNode-GenAI/PwC-Embedding_expr",
     encode_kwargs={
@@ -56,28 +55,35 @@ embeddings = HuggingFaceEmbeddings(
 )
 
 
-# 조건 검색과 표지 URL 조회에 사용하는 Supabase 연결입니다.
 supabase = create_supabase_client()
 
 
-# 로컬 ChromaDB에서 book 컬렉션을 불러옵니다.
 chroma_client = chromadb.PersistentClient(
     path=str(CHROMA_DB_PATH)
 )
-
 
 book_collection = chroma_client.get_collection(
     name="book"
 )
 
 
-# thread_id별 대화 기억을 프로세스 메모리에 저장합니다.
-# 서버를 다시 시작하면 초기화되므로 영구 저장이 필요하면 DB 체크포인터로 바꿔야 합니다.
+# 대화 기억
 memory = InMemorySaver()
 
 
+# thread_id별로 이미 추천한 책의 itemId를 저장합니다.
+thread_recommended_ids: dict[str, set[str]] = {}
+
+
+# 현재 질문에서 제외할 책 ID를 검색 함수와 공유합니다.
+current_excluded_ids = ContextVar(
+    "current_excluded_ids",
+    default=set(),
+)
+
+
 def get_memory_config(thread_id: str):
-    # 같은 thread_id를 사용하면 이전 질문과 답변을 이어서 사용할 수 있습니다.
+    """대화 ID를 기준으로 Agent 기억 설정을 만듭니다."""
     return {
         "configurable": {
             "thread_id": thread_id
@@ -86,10 +92,9 @@ def get_memory_config(thread_id: str):
 
 
 def reset_book_memory(thread_id: str):
-    """해당 대화방의 단기기억 삭제"""
-    # 앱의 '대화 초기화' 버튼에서 호출됩니다.
+    """대화 기억과 이전 추천 책 목록을 초기화합니다."""
     memory.delete_thread(thread_id)
-
+    thread_recommended_ids.pop(thread_id, None)
 
 
 def make_book_row(
@@ -100,12 +105,8 @@ def make_book_row(
     distance=None,
     chroma_id=None,
 ):
-    """
-    Supabase / ChromaDB 검색 결과를
-    Agent가 사용하기 좋은 동일한 형태로 바꾼다.
-    """
+    """Supabase와 ChromaDB 결과를 동일한 도서 형식으로 변환합니다."""
 
-    # Chroma와 Supabase의 결과를 Agent/UI가 공통으로 쓰는 형태로 통일합니다.
     data = data or {}
 
     row = {
@@ -120,12 +121,9 @@ def make_book_row(
         "cover_url": cover_url,
     }
 
-    # 조건 검색 결과에도 책 소개가 있으면 Agent가 추천 이유를 근거 있게 작성할 수 있습니다.
     if data.get("description"):
         row["description"] = data["description"]
 
-
-    # Chroma 검색에서만 필요한 값
     if chroma_id is not None:
         row["chroma_id"] = chroma_id
 
@@ -135,37 +133,24 @@ def make_book_row(
     if distance is not None:
         row["distance"] = distance
 
-
     return row
 
 
 def get_cover_map(item_ids):
-    """
-    itemId 목록을 받아서
-    Supabase에서 실제 cover URL을 가져온다.
-    """
+    """도서 ID 목록을 기준으로 Supabase에서 표지 URL을 가져옵니다."""
 
     if not item_ids:
         return {}
 
-
-    # 중복 itemId 제거
-    unique_item_ids = list(
-        dict.fromkeys(item_ids)
-    )
-
+    unique_item_ids = list(dict.fromkeys(item_ids))
 
     response = (
         supabase
         .table("books")
         .select("itemId, cover")
-        .in_(
-            "itemId",
-            unique_item_ids
-        )
+        .in_("itemId", unique_item_ids)
         .execute()
     )
-
 
     return {
         str(book["itemId"]): book.get("cover")
@@ -175,7 +160,7 @@ def get_cover_map(item_ids):
 
 
 class VectorSearchInput(BaseModel):
-    # 책의 내용·분위기·주제 검색에 사용할 입력 형식입니다.
+    """의미 기반 검색 입력 형식입니다."""
 
     query: str = Field(
         description=(
@@ -188,15 +173,12 @@ class VectorSearchInput(BaseModel):
         default=3,
         ge=1,
         le=20,
-        description=(
-            "사용자가 요청한 추천 책 개수. "
-            "개수를 말하지 않으면 3"
-        )
+        description="사용자가 요청한 추천 책 개수"
     )
 
 
 class SearchBookInput(BaseModel):
-    # 가격·평점·작가·카테고리처럼 명확한 조건 검색에 사용할 입력 형식입니다.
+    """조건 검색 입력 형식입니다."""
 
     category_name: str | None = Field(
         default=None,
@@ -238,12 +220,8 @@ class SearchBookInput(BaseModel):
         default=3,
         ge=1,
         le=20,
-        description=(
-            "사용자가 요청한 추천 책 개수. "
-            "개수를 말하지 않으면 3"
-        )
+        description="사용자가 요청한 추천 책 개수"
     )
-
 
 
 @tool(args_schema=VectorSearchInput)
@@ -252,21 +230,28 @@ def vector_search_descp(
     k: int = 3,
 ):
     """
-    내용, 분위기, 주제, 특징, 취향처럼
-    의미 기반 검색이 필요한 경우 사용한다.
+    책의 내용, 분위기, 주제, 특징 등을 기준으로
+    ChromaDB 의미 검색을 수행합니다.
     """
 
-    # 질문을 벡터로 변환한 뒤 의미가 가까운 책을 찾습니다.
-    # 질문 임베딩
-    query_embedding = embeddings.embed_query(
-        query
+    excluded_ids = current_excluded_ids.get()
+
+    # 이전 책을 제외하기 위해 k보다 많이 검색합니다.
+    collection_count = book_collection.count()
+
+    if collection_count == 0:
+        return []
+
+    candidate_k = min(
+        k + len(excluded_ids),
+        collection_count
     )
 
+    query_embedding = embeddings.embed_query(query)
 
-    # 벡터 검색
     results = book_collection.query(
         query_embeddings=[query_embedding],
-        n_results=k,
+        n_results=candidate_k,
         include=[
             "documents",
             "metadatas",
@@ -274,30 +259,20 @@ def vector_search_descp(
         ],
     )
 
-
     ids = results["ids"][0]
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
     distances = results["distances"][0]
 
-
-    # Chroma 결과의 itemId를 이용해 Supabase에서 실제 표지 URL을 보완합니다.
-    # Chroma 결과에서 itemId 추출
     item_ids = [
         metadata.get("itemId")
         for metadata in metadatas
         if metadata.get("itemId") is not None
     ]
 
-
-    # Supabase에서 cover URL 가져오기
-    cover_map = get_cover_map(
-        item_ids
-    )
-
+    cover_map = get_cover_map(item_ids)
 
     rows = []
-
 
     for book_id, document, metadata, distance in zip(
         ids,
@@ -305,27 +280,36 @@ def vector_search_descp(
         metadatas,
         distances,
     ):
-
         item_id = metadata.get("itemId")
 
+        # 이전에 추천한 책은 제외합니다.
+        if item_id is not None:
+            if str(item_id) in excluded_ids:
+                continue
 
         row = make_book_row(
             metadata,
-
             cover_url=(
                 cover_map.get(str(item_id))
                 if item_id is not None
                 else None
             ),
-
             description=document,
             distance=distance,
             chroma_id=book_id,
         )
 
-
         rows.append(row)
 
+        if len(rows) >= k:
+            break
+
+    # 이번 검색에서 사용한 책도 중복 방지를 위해 저장합니다.
+    for row in rows:
+        item_id = row.get("itemId")
+
+        if item_id is not None:
+            excluded_ids.add(str(item_id))
 
     return rows
 
@@ -341,11 +325,12 @@ def search_book(
     k: int = 3,
 ):
     """
-    가격, 평점, 작가, 카테고리처럼
-    정확한 조건으로 검색할 때 사용한다.
+    가격, 평점, 작가(저자), 카테고리 등
+    정확한 조건으로 Supabase에서 책을 검색합니다.
     """
 
-    # 입력된 조건만 Supabase 쿼리에 추가합니다.
+    excluded_ids = current_excluded_ids.get()
+
     request = (
         supabase
         .table("books")
@@ -363,21 +348,17 @@ def search_book(
         )
     )
 
-
     if category_name is not None:
         request = request.eq(
             "category_name",
             category_name
         )
 
-
     if author and author.strip():
-        # 작가명은 일부만 입력해도 검색되도록 부분 일치로 처리합니다.
         request = request.ilike(
             "author",
             f"%{author.strip()}%"
         )
-
 
     if min_price is not None:
         request = request.gte(
@@ -385,13 +366,11 @@ def search_book(
             min_price
         )
 
-
     if max_price is not None:
         request = request.lte(
             "priceStandard",
             max_price
         )
-
 
     if min_rating is not None:
         request = request.gte(
@@ -399,62 +378,80 @@ def search_book(
             min_rating
         )
 
-
     if max_rating is not None:
         request = request.lte(
             "customerReviewRank",
             max_rating
         )
 
-
+    # 이전 책이 있을 수 있으므로 더 많이 검색합니다.
     response = (
         request
-        .limit(k)
+        .limit(k + len(excluded_ids))
         .execute()
     )
 
+    rows = []
 
-    # 벡터 검색 결과와 동일한 형식으로 변환해 Agent와 UI가 함께 사용합니다.
-    return [
-        make_book_row(
-            book,
-            cover_url=book.get("cover"),
+    for book in response.data:
+        item_id = book.get("itemId")
+
+        # 이전에 추천한 책은 제외합니다.
+        if item_id is not None:
+            if str(item_id) in excluded_ids:
+                continue
+
+        rows.append(
+            make_book_row(
+                book,
+                cover_url=book.get("cover"),
+            )
         )
-        for book in response.data
-    ]
+
+        if len(rows) >= k:
+            break
+
+    # 이번 검색 결과도 추천 목록에 저장합니다.
+    for row in rows:
+        item_id = row.get("itemId")
+
+        if item_id is not None:
+            excluded_ids.add(str(item_id))
+
+    return rows
 
 
-# Agent가 질문에 따라 선택할 도구 목록입니다.
 tools = [
     search_book,
     vector_search_descp,
 ]
 
 
-# 검색 도구 선택, 대화 기억, 환각 방지 규칙을 Agent에 전달합니다.
 SYSTEM_PROMPT = """
 너는 사용자의 취향과 조건에 맞는 책을 추천하는
 도서 추천 에이전트다.
 
 [대화 기억]
 - 이전 대화를 참고해서 후속 질문을 이해한다.
-- "그중에서", "그 책", "그 작가" 같은 표현은
+- "그중에서", "그 책", "그 작가(저자)" 같은 표현은
   이전 대화의 내용을 참고한다.
 
 [도구 선택]
-- 가격, 평점, 작가, 카테고리 → search_book
+- 가격, 평점, 작가(저자), 카테고리 → search_book
 - 내용, 분위기, 주제, 특징, 취향 → vector_search_descp
 - 두 조건이 섞여 있으면 필요한 도구를 사용한다.
+- 작가(저자)의 권수를 물어 볼 시 ->search_book 
 
 [추천 개수]
 - 사용자가 개수를 말하면 그 숫자를 k로 사용한다.
 - 개수를 말하지 않으면 k=3이다.
 
-[검색 결과]
-- 반드시 도구에서 검색된 책만 추천한다.
-- 검색되지 않은 책이나 정보를 만들지 않는다.
+[중복 방지]
+- 반드시 검색 도구에서 반환된 책만 추천한다.
 - 같은 itemId는 같은 책이다.
-- 같은 책을 중복 추천하지 않는다.
+- 이전에 추천한 책은 다시 추천하지 않는다.
+- 사용자가 "다른 책", "새로운 책"을 요청하면
+  이전 추천 책을 제외한 검색 결과만 사용한다.
 
 [표지 이미지]
 - cover_url은 도구의 값을 그대로 사용한다.
@@ -469,16 +466,13 @@ SYSTEM_PROMPT = """
 - 가격
 - 평점
 - 추천 이유
-- 이미지
 """
 
 
-# 실제 LangChain Agent를 생성합니다.
 agent = create_agent(
     model=GPTmodel,
     tools=tools,
     system_prompt=SYSTEM_PROMPT,
-
     checkpointer=memory,
 )
 
@@ -487,11 +481,8 @@ def run_agent(
     question: str,
     thread_id: str = "cli-session",
 ):
-    """
-    모든 Agent 실행은 이 함수 하나를 통해 처리한다.
-    """
+    """질문을 LangChain Agent에 전달하고 답변을 생성합니다."""
 
-    # 같은 thread_id를 전달해 후속 질문이 이전 대화를 참고하도록 합니다.
     result = agent.invoke(
         {
             "messages": [
@@ -501,42 +492,24 @@ def run_agent(
                 }
             ]
         },
-
-        config=get_memory_config(
-            thread_id
-        ),
+        config=get_memory_config(thread_id),
     )
 
+    answer = result["messages"][-1].content
 
-    answer = result[
-        "messages"
-    ][-1].content
-
-
-    if not isinstance(
-        answer,
-        str
-    ):
+    if not isinstance(answer, str):
         answer = str(answer)
-
 
     return answer, result
 
 
 def _parse_book_rows(value):
-    """
-    ToolMessage 내부의 list / dict / 문자열을
-    책 정보 리스트로 변환한다.
-    """
+    """검색 결과를 도서 정보 리스트로 변환합니다."""
 
     if value is None:
         return []
 
-
-    # ToolMessage 결과가 list/dict/문자열 중 어떤 형태여도 책 목록으로 변환합니다.
-    # list
     if isinstance(value, list):
-
         rows = []
 
         for item in value:
@@ -546,53 +519,36 @@ def _parse_book_rows(value):
 
         return rows
 
-
     if isinstance(value, dict):
-
-        # 실제 책 한 권
         if "cover_url" in value:
             return [value]
 
-
         rows = []
 
-        # ToolMessage content block 처리
         for key in (
             "rows",
             "text",
             "content",
         ):
-
             if key in value:
-
                 rows.extend(
-                    _parse_book_rows(
-                        value[key]
-                    )
+                    _parse_book_rows(value[key])
                 )
-
 
         return rows
 
-
-    # 문자열
     if isinstance(value, str):
-
         text = value.strip()
 
         if not text:
             return []
 
-
         for parser in (
             json.loads,
             ast.literal_eval,
         ):
-
             try:
-
                 parsed = parser(text)
-
             except (
                 ValueError,
                 SyntaxError,
@@ -600,74 +556,52 @@ def _parse_book_rows(value):
             ):
                 continue
 
-
-            return _parse_book_rows(
-                parsed
-            )
-
+            return _parse_book_rows(parsed)
 
     return []
 
 
 def extract_book_rows(result):
     """
-    현재 질문에서 Tool이 검색한 책만 가져온다.
-
-    단기기억 때문에 이전 ToolMessage들도 result에 들어갈 수 있으므로
-    가장 최근 HumanMessage 이후의 ToolMessage만 확인한다.
+    현재 질문에서 검색된 책만 추출합니다.
+    이전 대화의 ToolMessage는 제외합니다.
     """
 
-    if not isinstance(
-        result,
-        dict
-    ):
+    if not isinstance(result, dict):
         return []
 
-
-    # 이번 질문 이후에 생성된 ToolMessage만 찾아 UI 카드용 책 목록을 만듭니다.
     messages = result.get(
         "messages",
         []
     )
 
-
     start_index = 0
-
 
     for index in range(
         len(messages) - 1,
         -1,
         -1,
     ):
-
         if getattr(
             messages[index],
             "type",
             ""
         ) == "human":
-
             start_index = index + 1
             break
 
-    current_messages = messages[
-        start_index:
-    ]
-
+    current_messages = messages[start_index:]
 
     rows = []
     seen = set()
 
-
     for message in current_messages:
-
         if getattr(
             message,
             "type",
             ""
         ) != "tool":
-
             continue
-
 
         tool_rows = _parse_book_rows(
             getattr(
@@ -677,27 +611,18 @@ def extract_book_rows(result):
             )
         )
 
-
         for row in tool_rows:
+            cover_url = row.get("cover_url")
 
-            cover_url = row.get(
-                "cover_url"
-            )
-
-
-            # 표지가 없는 책은 텍스트 답변에는 남을 수 있지만 UI 카드에서는 제외합니다.
-            # Streamlit 카드에는
-            # 실제 cover가 있는 책만 사용
+            # 표지가 없는 책은 화면 카드에서 제외합니다.
             if not isinstance(
                 cover_url,
                 str
             ):
                 continue
 
-
             if not cover_url.strip():
                 continue
-
 
             identity = (
                 row.get("itemId")
@@ -705,42 +630,51 @@ def extract_book_rows(result):
                 or cover_url
             )
 
-
             if identity in seen:
                 continue
-
 
             seen.add(identity)
             rows.append(row)
 
-
     return rows
+
 
 def ask_book_agent_with_results(
     question: str,
     thread_id: str,
 ):
     """
-    return
+    질문을 처리하고 답변과 추천 도서 목록을 반환합니다.
 
-    answer:
-        LLM 최종 답변
-
-    books:
-        Streamlit 카드에서 사용할 실제 검색 결과
+    같은 thread_id에서 이전에 추천한 책은
+    다음 질문의 검색 결과에서 제외합니다.
     """
 
-    # 앱이 사용할 최종 답변과 실제 검색된 책 목록을 함께 반환합니다.
-    answer, result = run_agent(
-        question,
+    excluded_ids = thread_recommended_ids.setdefault(
         thread_id,
+        set(),
     )
 
-
-    books = extract_book_rows(
-        result
+    token = current_excluded_ids.set(
+        excluded_ids
     )
 
+    try:
+        answer, result = run_agent(
+            question,
+            thread_id,
+        )
 
-    return answer, books
+        books = extract_book_rows(result)
 
+        # 화면에 표시된 책도 추천 목록에 저장합니다.
+        for book in books:
+            item_id = book.get("itemId")
+
+            if item_id is not None:
+                excluded_ids.add(str(item_id))
+
+        return answer, books
+
+    finally:
+        current_excluded_ids.reset(token)
