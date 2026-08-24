@@ -166,15 +166,6 @@ RAG AI 에이전트 연동 및 메모리 관리
 
 ## 4. 기술 스택
 
-프론트엔드 : Bootstrap 5.3.0, AntDesign 5.0, React 5.0.1, NodeJS 18.13.0 LTS
-
-백엔드 : Oracle Java 11.0.17, Spring boot 2.7.7, JPA, Swagger 2.9.2, python 3.8.0, MySQL 8.0.31
-
-CI/CD: Jenkins, Docker, AWS ec2
-
-IoT : Arduino 2.0.3
-
-이슈관리 : Jira, Notion
 
 분석 : pandas,matplotlib
 
