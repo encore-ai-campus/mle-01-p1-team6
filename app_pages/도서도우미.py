@@ -7,6 +7,12 @@ from uuid import uuid4
 
 import streamlit as st
 
+import os
+import sys
+
+# 현재 파일(dashboard.py)의 상위 폴더(프로젝트 루트)를 파이썬 모듈 검색 경로에 추가
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils.theme import apply_library_theme
 
 
