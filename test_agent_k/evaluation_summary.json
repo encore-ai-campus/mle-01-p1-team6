@@ -1,0 +1,64 @@
+{
+  "mode": "both",
+  "agent": {
+    "total_cases": 20,
+    "success_cases": 20,
+    "error_cases": 0,
+    "success_rate": 1.0,
+    "overall": {
+      "hit_at_k": 0.95,
+      "precision_at_k": 0.7058333333333332,
+      "recall_at_k": 0.7058333333333332,
+      "mrr_at_k": 0.9,
+      "retrieval_score": 0.8154166666666667,
+      "tool_match": 1.0,
+      "count_fulfillment": 0.9333333333333333,
+      "answer_grounding": 0.9450000000000001,
+      "comprehensive_score": 0.8770833333333334,
+      "latency_sec": 7.639898095006356
+    },
+    "by_search_type": {
+      "semantic": {
+        "hit_at_k": 0.875,
+        "precision_at_k": 0.30625,
+        "recall_at_k": 0.30625,
+        "mrr_at_k": 0.75,
+        "retrieval_score": 0.559375,
+        "tool_match": 1.0,
+        "count_fulfillment": 0.875,
+        "answer_grounding": 0.8625,
+        "comprehensive_score": 0.709375,
+        "latency_sec": 8.790907174974564
+      },
+      "structured": {
+        "hit_at_k": 1.0,
+        "precision_at_k": 0.9722222222222222,
+        "recall_at_k": 0.9722222222222222,
+        "mrr_at_k": 1.0,
+        "retrieval_score": 0.9861111111111112,
+        "tool_match": 1.0,
+        "count_fulfillment": 0.9722222222222222,
+        "answer_grounding": 1.0,
+        "comprehensive_score": 0.9888888888888889,
+        "latency_sec": 6.872558708360884
+      }
+    }
+  },
+  "chroma_baseline": {
+    "total_cases": 8,
+    "error_cases": 0,
+    "overall": {
+      "hit_at_k": 0.875,
+      "precision_at_k": 0.3125,
+      "recall_at_k": 0.3125,
+      "mrr_at_k": 0.6145833333333333,
+      "retrieval_score": 0.5286458333333333,
+      "latency_sec": 0.1483181250077905
+    }
+  },
+  "semantic_gap": {
+    "agent_retrieval_score": 0.559375,
+    "direct_chroma_retrieval_score": 0.5286458333333333,
+    "agent_minus_chroma": 0.030729166666666696
+  }
+}
