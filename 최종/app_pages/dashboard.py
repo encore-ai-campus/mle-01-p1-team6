@@ -97,10 +97,15 @@ def render_sidebar(books: pd.DataFrame) -> tuple[pd.DataFrame, int]:
 
 
 def render_header() -> None:
-    with st.container(border=True):
-        st.caption("LIBRARY INTELLIGENCE  /  CATALOG ANALYTICS")
-        st.title("📊 도서 분석 대시보드")
-        st.write("카탈로그 데이터를 한눈에 살펴보고 독서 트렌드를 발견해 보세요.")
+    st.html(
+        """
+        <div class="page-header">
+          <div class="page-eyebrow">Library intelligence / catalog analytics</div>
+          <div class="page-title">숫자 뒤에 숨은 <em>독서의 흐름</em>을 읽다.</div>
+          <p class="page-subtitle">카탈로그의 가격·평점·판매 신호를 한 화면에서 살펴보고, 어떤 분야와 목소리가 지금 주목받는지 발견해 보세요.</p>
+        </div>
+        """
+    )
 
 
 def render_kpis(filtered: pd.DataFrame) -> None:
@@ -136,7 +141,7 @@ def render_analysis_tabs(filtered: pd.DataFrame, top_k: int) -> None:
             color=alt.Color(
                 "통계:N",
                 title=None,
-                scale=alt.Scale(domain=["평균", "중앙값"], range=["#2563EB", "#0EA5E9"]),
+                scale=alt.Scale(domain=["평균", "중앙값"], range=["#5B4BDB", "#0F9F96"]),
             ),
             tooltip=[
                 alt.Tooltip("category_name:N", title="카테고리"),
@@ -218,8 +223,9 @@ def render_analysis_tabs(filtered: pd.DataFrame, top_k: int) -> None:
 
 
 def render_popular_books(filtered: pd.DataFrame) -> None:
-    st.subheader("인기 도서")
-    st.caption("판매지수와 평점을 기준으로 현재 필터에서 가장 주목받는 책입니다.")
+    st.html(
+        '<div class="section-row"><div><h2>지금 읽히는 책</h2><p>판매지수와 평점을 기준으로 현재 필터에서 가장 주목받는 책입니다.</p></div><span class="book-pill">TOP PICKS</span></div>'
+    )
 
     popular = filtered.sort_values(
         ["salesPoint", "customerReviewRank"], ascending=False
@@ -240,8 +246,10 @@ def render_popular_books(filtered: pd.DataFrame) -> None:
                         st.image(cover_url, width=150)
                     else:
                         st.markdown(":material/menu_book:")
-                    st.markdown(f"**{book['title'] or '제목 정보 없음'}**")
-                    st.caption(book["author"] or "저자 정보 없음")
+                    st.html(
+                        f'<div class="book-card-title">{book["title"] or "제목 정보 없음"}</div>'
+                        f'<div class="book-card-meta">{book["author"] or "저자 정보 없음"}</div>'
+                    )
                     st.write(
                         f"{format_price(book['priceStandard'])} · "
                         f"평점 {format_rating(book['customerReviewRank'])}"
@@ -259,8 +267,9 @@ books = load_books()
 filtered, top_k = render_sidebar(books)
 render_header()
 
-st.subheader("한눈에 보는 도서 카탈로그")
-st.caption(f"현재 필터에 맞는 {format_count(len(filtered))}개 행을 기준으로 집계했습니다.")
+st.html(
+    f'<div class="section-row"><div><h2>카탈로그 스냅샷</h2><p>현재 필터에 맞는 {format_count(len(filtered))}개 행을 기준으로 집계했습니다.</p></div><span class="book-pill">LIVE DATA</span></div>'
+)
 render_kpis(filtered)
 
 if filtered.empty:
@@ -272,3 +281,5 @@ if filtered.empty:
 
 render_analysis_tabs(filtered, top_k)
 render_popular_books(filtered)
+
+

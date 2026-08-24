@@ -79,7 +79,7 @@ def render_book_cards(books: list[dict[str, Any]]) -> None:
     if not books:
         return
 
-    st.markdown("#### 검색된 추천 도서")
+    st.html('<div class="section-row"><div><h2>검색된 추천 도서</h2><p>답변의 근거가 된 책을 함께 확인해 보세요.</p></div><span class="book-pill">GROUNDED</span></div>')
     for start in range(0, len(books), 3):
         row = books[start : start + 3]
         columns = st.columns(len(row), gap="small")
@@ -90,7 +90,10 @@ def render_book_cards(books: list[dict[str, Any]]) -> None:
                     if isinstance(cover_url, str) and cover_url.strip():
                         st.image(cover_url, width=120)
 
-                    st.markdown(f"**{book.get('title') or '제목 정보 없음'}**")
+                    st.html(
+                        f'<div class="book-card-title">{book.get("title") or "제목 정보 없음"}</div>'
+                        f'<div class="book-card-meta">{book.get("author") or "저자 정보 없음"}</div>'
+                    )
                     if book.get("author"):
                         st.caption(str(book["author"]))
 
@@ -128,20 +131,27 @@ def reset_chat() -> None:
 
 initialize_state()
 
-avatar_column, header_column, action_column = st.columns([1, 5, 1], vertical_alignment="bottom")
-with avatar_column:
-    if ASSISTANT_AVATAR.exists():
-        st.image(str(ASSISTANT_AVATAR), width=92)
+header_column, action_column = st.columns([5, 1], vertical_alignment="center")
 with header_column:
-    st.caption("🤖 AGENT RAG  /  BOOK DISCOVERY")
-    st.title("🤖 도서 도우미 AI")
-    st.write("자연어 질문으로 원하는 책을 찾고, 검색 결과를 근거와 함께 확인해 보세요.")
+    st.html(
+        """
+        <div class="assistant-hero">
+          <div class="assistant-hero-inner">
+            <div>
+              <div class="assistant-label">Agent RAG / book discovery</div>
+              <div class="assistant-title">책을 고르는 대화를 시작해 보세요.</div>
+              <p class="assistant-copy">자연어 질문으로 원하는 책을 찾고, 검색 결과를 근거와 함께 확인할 수 있습니다.</p>
+              <div class="status-line">도서 인덱스와 추천 에이전트 연결됨</div>
+            </div>
+          </div>
+        </div>
+        """
+    )
 with action_column:
     if st.button("새 대화", icon=":material/restart_alt:", width="stretch"):
         reset_chat()
         st.rerun()
 
-st.badge("agent/book_agent.py 연결", icon=":material/auto_awesome:", color="blue")
 st.caption("의미 기반 검색은 ChromaDB, 조건 검색과 표지 정보는 Agent의 Supabase 도구를 사용합니다.")
 
 suggestion = None

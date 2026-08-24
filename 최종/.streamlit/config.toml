@@ -1,0 +1,32 @@
+[theme]
+base = "light"
+primaryColor = "#5B4BDB"
+backgroundColor = "#F7F7F3"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#172033"
+linkColor = "#5B4BDB"
+borderColor = "#E8E9EE"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["40px", "28px", "21px", "17px", "14px", "12px"]
+headingFontWeights = [800, 750, 700, 650, 600, 600]
+baseRadius = "12px"
+buttonRadius = "10px"
+showWidgetBorder = true
+showSidebarBorder = true
+linkUnderline = false
+violetColor = "#7C3AED"
+greenColor = "#0F9F96"
+blueColor = "#5B4BDB"
+grayColor = "#667085"
+chartCategoricalColors = ["#5B4BDB", "#0F9F96", "#7C3AED", "#E5A84B", "#D86C9D"]
+
+[theme.sidebar]
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F6F7FA"
+textColor = "#30364A"
+borderColor = "#E8E9EE"
+primaryColor = "#5B4BDB"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import math
 
 import streamlit as st
@@ -9,6 +10,10 @@ from utils.theme import apply_library_theme
 
 
 apply_library_theme()
+
+
+def html_block(markup: str) -> None:
+    st.html(markup)
 
 
 books = load_books()
@@ -22,19 +27,28 @@ sort_options = {
     "판매지수 높은순": ["salesPoint"],
 }
 
-st.title("🔎 도서 검색")
-st.caption("제목, 저자, 출판사, 책 소개를 한 번에 검색할 수 있습니다.")
+html_block(
+    """
+    <div class="page-header">
+      <div class="page-eyebrow">Book discovery / semantic index</div>
+      <div class="page-title">찾고 싶은 책을, <em>더 정확하게.</em></div>
+      <p class="page-subtitle">제목과 키워드뿐 아니라 저자, 출판사, 책 소개까지 함께 살펴봅니다. 검색어가 짧아도 지금 필요한 책에 가까운 결과부터 보여드릴게요.</p>
+    </div>
+    """
+)
 
 with st.form("book_search_form", border=True):
-    query = st.text_input("검색어", placeholder="예: 추리, 김영하, 자기계발")
-    first, second, third = st.columns(3)
+    st.markdown("**카탈로그 검색**")
+    query = st.text_input("검색어", placeholder="예: 추리, 김영하, 자기계발", label_visibility="collapsed")
+    first, second, third, action = st.columns([1.15, 1.15, 1.15, .55], vertical_alignment="bottom")
     with first:
         category = st.selectbox("카테고리", categories)
     with second:
         sort_option = st.selectbox("정렬", list(sort_options))
     with third:
         page_size = st.selectbox("페이지당 표시", [10, 20, 40], index=1)
-    submitted = st.form_submit_button("검색", type="primary", icon=":material/search:")
+    with action:
+        submitted = st.form_submit_button("검색", type="primary", icon=":material/search:", width="stretch")
 
 if submitted or "search_query" not in st.session_state:
     st.session_state.search_query = query
@@ -74,39 +88,51 @@ total = len(result)
 total_pages = max(1, math.ceil(total / page_size))
 st.session_state.search_page = min(st.session_state.get("search_page", 1), total_pages)
 
-header_left, header_right = st.columns([3, 1])
-header_left.write(f"검색 결과 **{total:,}권**")
-with header_right:
+page_left, page_right = st.columns([3, 1], vertical_alignment="center")
+with page_left:
+    query_label = f"‘{html.escape(query)}’ 검색 결과" if query.strip() else "추천 도서 카탈로그"
+    html_block(f'<div class="result-summary"><strong>{query_label}</strong><span>{total:,}권 · 페이지 {st.session_state.search_page} / {total_pages}</span></div>')
+with page_right:
     page = st.selectbox(
         "페이지",
         range(1, total_pages + 1),
         index=st.session_state.search_page - 1,
         key="search_page_select",
-        format_func=lambda value: f"{value} / {total_pages}",
+        format_func=lambda value: f"페이지 {value} / {total_pages}",
         label_visibility="collapsed",
     )
     st.session_state.search_page = page
 
 if not total:
-    st.info("검색 결과가 없습니다. 다른 검색어나 카테고리를 선택해 보세요.")
+    html_block('<div class="empty-state"><strong>아직 맞는 책을 찾지 못했어요.</strong><br/>검색어를 조금 넓히거나 다른 카테고리를 선택해 보세요.</div>')
     st.stop()
 
 start = (st.session_state.search_page - 1) * page_size
 for _, book in result.iloc[start : start + page_size].iterrows():
+    title = html.escape(str(book["title"] or "제목 정보 없음"))
+    author = html.escape(str(book["author"] or "저자 정보 없음"))
+    publisher = html.escape(str(book["publisher"] or "출판사 정보 없음"))
+    category_label = html.escape(str(book["category_name"] or "기타"))
+    description = str(book["description"] or "").replace("\n", " ").strip()
     with st.container(border=True):
-        cover, detail = st.columns([1, 5])
+        cover, detail = st.columns([1, 5], vertical_alignment="top")
         with cover:
             cover_url = safe_cover(book.get("cover"))
             if cover_url:
-                st.image(cover_url, width=110)
+                st.image(cover_url, width=118)
             else:
                 st.markdown(":material/menu_book:")
         with detail:
-            st.subheader(book["title"] or "제목 정보 없음")
-            st.caption(f"{book['author'] or '저자 정보 없음'} · {book['publisher'] or '출판사 정보 없음'}")
-            st.write(f"{format_price(book['priceStandard'])} · 평점 {format_rating(book['customerReviewRank'])} · {book['category_name']}")
-            description = book["description"].replace("\n", " ").strip()
+            html_block(
+                f'<div class="book-result-title">{title}</div>'
+                f'<div class="book-result-meta">{author} · {publisher}</div>'
+                f'<div style="margin-top:.55rem"><span class="book-pill">{category_label}</span></div>'
+            )
+            st.caption(f"{format_price(book['priceStandard'])} · 평점 {format_rating(book['customerReviewRank'])} · 판매지수 {book['salesPoint']:,.0f}")
             if description:
-                st.write(description[:180] + ("…" if len(description) > 180 else ""))
+                short_description = html.escape(description[:220] + ("…" if len(description) > 220 else ""))
+                html_block(f'<div class="book-result-description">{short_description}</div>')
             if isinstance(book.get("link"), str) and book["link"].startswith("http"):
-                st.link_button("알라딘에서 보기", book["link"], icon=":material/open_in_new:")
+                st.link_button("상세 페이지 열기", book["link"], icon=":material/open_in_new:")
+
+
