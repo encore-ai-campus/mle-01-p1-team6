@@ -205,7 +205,7 @@ class SearchBookInput(BaseModel):
 
     author: str | None = Field(
         default=None,
-        description="작가 이름"
+        description="저자 이름"
     )
 
     min_price: int | None = Field(
