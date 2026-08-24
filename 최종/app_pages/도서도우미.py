@@ -82,14 +82,16 @@ def render_book_cards(books: list[dict[str, Any]]) -> None:
     st.html('<div class="section-row"><div><h2>검색된 추천 도서</h2><p>답변의 근거가 된 책을 함께 확인해 보세요.</p></div><span class="book-pill">GROUNDED</span></div>')
     for start in range(0, len(books), 3):
         row = books[start : start + 3]
-        columns = st.columns(len(row), gap="small")
-        for column, book in zip(columns, row):
+        columns = st.columns(len(row), gap="small", vertical_alignment="top")
+        for rank, (column, book) in enumerate(zip(columns, row), start=start + 1):
             with column:
-                with st.container(border=True, height="stretch"):
+                with st.container(border=True, height="stretch", gap="small"):
                     cover_url = book.get("cover_url")
                     if isinstance(cover_url, str) and cover_url.strip():
-                        st.image(cover_url, width=120)
+                        with st.container(horizontal_alignment="center", gap="small"):
+                            st.image(cover_url, width=145)
 
+                    st.badge(f"추천 {rank}위", icon=":material/auto_awesome:", color="orange")
                     st.html(
                         f'<div class="book-card-title">{book.get("title") or "제목 정보 없음"}</div>'
                         f'<div class="book-card-meta">{book.get("author") or "저자 정보 없음"}</div>'
@@ -102,12 +104,28 @@ def render_book_cards(books: list[dict[str, Any]]) -> None:
                         metadata.append(f"{int(book['price']):,}원")
                     if book.get("rating") is not None:
                         metadata.append(f"평점 {book['rating']}")
+                    if book.get("category_name"):
+                        metadata.append(str(book["category_name"]))
                     if metadata:
                         st.caption(" · ".join(metadata))
 
-                    if book.get("description"):
-                        with st.expander("검색 근거"):
-                            st.write(book["description"])
+                    with st.expander("왜 추천했나요?", icon=":material/lightbulb:"):
+                        evidence = []
+                        if book.get("category_name"):
+                            evidence.append(f"{book['category_name']} 카테고리 조건")
+                        if book.get("author"):
+                            evidence.append(f"저자: {book['author']}")
+                        if book.get("rating") is not None:
+                            evidence.append(f"평점: {book['rating']}")
+
+                        if evidence:
+                            st.write(" · ".join(evidence))
+                        st.caption("사용자의 질문과 검색 결과를 바탕으로 선택된 도서입니다.")
+
+                        if book.get("description"):
+                            st.caption("검색된 책 소개")
+                            description = str(book["description"])
+                            st.write(description[:500] + ("…" if len(description) > 500 else ""))
 
 
 def reset_chat() -> None:
