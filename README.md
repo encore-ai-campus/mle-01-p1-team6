@@ -89,7 +89,7 @@ https://docs.google.com/spreadsheets/d/1ZJgJIghaqzIkKTq6vFZOF8Jn6ew6aYHZfGQ7P2dl
 
 ### 3-2. 도서도우미 AI
 
-![도서도우미 AI](최종\image\Animation.gif)
+![도서도우미 AI](최종/image/Animation.gif)
 
 
 #### 3-2-1. 도서도우미 AI - 주요 기능 분석
